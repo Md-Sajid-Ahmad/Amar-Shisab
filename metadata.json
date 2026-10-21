@@ -1,0 +1,6 @@
+{
+  "name": "Amar Hisab",
+  "description": "আমার হিসাব - ব্যক্তিগত খরচ ট্র্যাকার ও বাজেট ব্যবস্থাপনা (Personal expense tracker in Bengali with BDT currency, monthly budgets, reports, and PDF export)",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

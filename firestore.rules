@@ -1,0 +1,91 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isValidTimestamp(val) {
+      return val is timestamp;
+    }
+
+    function isValidUser(data, userId) {
+      return data.userId == userId &&
+        data.displayName is string && data.displayName.size() > 0 &&
+        data.email is string &&
+        (!('photoUrl' in data) || data.photoUrl is string) &&
+        isValidTimestamp(data.createdAt) &&
+        isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidAccount(data, userId) {
+      return data.userId == userId &&
+        data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+        data.iconEmoji is string && data.iconEmoji.size() > 0 &&
+        (!('colorHex' in data) || data.colorHex is string) &&
+        (!('localId' in data) || data.localId is int) &&
+        isValidTimestamp(data.createdAt) &&
+        isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidTransaction(data, userId) {
+      return data.userId == userId &&
+        data.amount is int && data.amount > 0 &&
+        data.description is string && data.description.size() > 0 && data.description.size() <= 200 &&
+        data.category is string && data.category.size() > 0 &&
+        (data.type == 'EXPENSE' || data.type == 'REFUND') &&
+        (!('notes' in data) || data.notes is string) &&
+        data.timestamp is int &&
+        data.yearMonth is string && data.yearMonth.size() == 7 &&
+        (!('localAccountId' in data) || data.localAccountId is int) &&
+        isValidTimestamp(data.createdAt) &&
+        isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidMonthlyBudget(data, userId) {
+      return data.userId == userId &&
+        data.yearMonth is string && data.yearMonth.size() == 7 &&
+        data.targetBudget is int && data.targetBudget >= 0 &&
+        data.startingBalance is int &&
+        isValidTimestamp(data.createdAt) &&
+        isValidTimestamp(data.updatedAt);
+    }
+
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUser(request.resource.data, userId);
+      allow update: if isOwner(userId) && isValidUser(request.resource.data, userId) &&
+                    request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isOwner(userId);
+
+      match /accounts/{accountId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidAccount(request.resource.data, userId);
+        allow update: if isOwner(userId) && isValidAccount(request.resource.data, userId) &&
+                      request.resource.data.createdAt == resource.data.createdAt;
+        allow delete: if isOwner(userId);
+      }
+
+      match /transactions/{transactionId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidTransaction(request.resource.data, userId);
+        allow update: if isOwner(userId) && isValidTransaction(request.resource.data, userId) &&
+                      request.resource.data.createdAt == resource.data.createdAt;
+        allow delete: if isOwner(userId);
+      }
+
+      match /budgets/{budgetId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidMonthlyBudget(request.resource.data, userId);
+        allow update: if isOwner(userId) && isValidMonthlyBudget(request.resource.data, userId) &&
+                      request.resource.data.createdAt == resource.data.createdAt;
+        allow delete: if isOwner(userId);
+      }
+    }
+  }
+}
